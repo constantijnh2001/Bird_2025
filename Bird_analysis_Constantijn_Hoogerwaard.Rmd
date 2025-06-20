@@ -1,0 +1,1348 @@
+``` {r csv creating 2023, message=FALSE, warning=FALSE}
+library(readxl)
+
+Visual_data_Gulls_2023 <- read_excel("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Visual_data_Gulls.xlsx", 
+                                           sheet = "DATA 2023")
+Visual_data_Gulls_2023 <- Visual_data_Gulls_2023[,c("bird _ID", "Start_time" ,"end_time")]
+unique_gulls_2023 <-  unique(Visual_data_Gulls_2023$`bird _ID`)
+bird_ids_2023 <- as.character(unique_gulls_2023)
+
+# Create a list to store the subsets
+bird_data_list_2023 <- list()
+
+for (id in bird_ids_2023) {
+  bird_data_list_2023[[id]] <- Visual_data_Gulls_2023[Visual_data_Gulls_2023$`bird _ID` == id, ]
+}
+
+write.csv(bird_data_list_2023$`7087`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5654`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5717`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5965`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5579`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`7090`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`7092`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5979`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`7130`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5615`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5861`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`7088`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5557`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5797`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5942`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5943`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2023$`5977`, "input.csv", row.names = FALSE)
+```
+
+``` {r csv creating 2024, message=FALSE, warning=FALSE}
+library(readxl)
+
+#load in the excell
+Visual_data_Gulls_2024 <- read_excel("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Visual_data_Gulls.xlsx",
+                                     sheet = "DATA 2024", col_types = c("date", "date", "numeric", "text", "numeric","numeric", "numeric",
+                                                                        "text"))
+Visual_data_Gulls_2024 <- Visual_data_Gulls_2024[,c("bird _ID", "Start_time" ,"end_time")]
+unique_gulls_2024 <-  unique(Visual_data_Gulls_2024$`bird _ID`)
+bird_ids_2024 <- as.character(unique_gulls_2024)
+
+# Create a list to store the subsets
+bird_data_list_2024 <- list()
+
+for (id in bird_ids_2024) {
+  bird_data_list_2024[[id]] <- Visual_data_Gulls_2024[Visual_data_Gulls_2024$`bird _ID` == id, ]
+}
+# creating csv files for further analysis
+write.csv(bird_data_list_2024$`7092`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5717`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5965`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`7088`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5579`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5979`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5557`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5615`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`7087`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`7090`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5977`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`6515`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`7014`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5065`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5861`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5942`, "input.csv", row.names = FALSE)
+write.csv(bird_data_list_2024$`5865`, "input.csv", row.names = FALSE)
+```
+
+```{r loop files points inside park 2023, message=FALSE, warning=FALSE}
+library(sf)
+library(dplyr)
+library(purrr)
+
+# creating file_name to merge wend_back
+Visual_data_Gulls_2023$file_name <- paste0(Visual_data_Gulls_2023$`bird _ID`,"_",
+                                 format(Visual_data_Gulls_2023$Start_time,"%Y-%m-%d %H:%M:%S"),"_",
+                                 format(Visual_data_Gulls_2023$end_time,"%Y-%m-%d %H:%M:%S"),".csv")
+# 1. Load wind park polygons
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+# 2. Define the folder with your CSV files
+csv_folder <- "/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/processed_data_2023"
+# 3. List all CSV files in the folder
+csv_files <- list.files(path = csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+# 4. Loop over all CSV files
+results_list <- map_dfr(csv_files, function(file) {
+  df <- read_csv(file, show_col_types = FALSE)
+  sf_points <- st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
+  wind_parks <- st_transform(wind_parks, st_crs(sf_points))
+  intersects <- st_intersects(sf_points, wind_parks)
+  sf_points$inPark <- ifelse(lengths(intersects) > 0, 1, 0)
+  sf_points$file_name <- basename(file)
+  
+  return(sf_points)
+})
+
+# 5. putting the coordinates back inside the data frame
+results_list <- results_list %>%
+  mutate(
+    longitude = st_coordinates(.)[, 1],
+    latitude = st_coordinates(.)[, 2]
+  )
+
+results_list <- merge(results_list, Visual_data_Gulls_2023[, c("file_name","WENT_BACK")], 
+               by = "file_name", all.x =TRUE)
+# 6. Filter only points inside wind parks
+points_inside <- results_list %>% filter(inPark == 1)
+
+# 7. Save to CSV 
+write_csv(as.data.frame(st_drop_geometry(results_list)), "all_tracker_data_with_inPark_2023.csv")
+write_csv(as.data.frame(st_drop_geometry(points_inside)), "points_inside_wind_parks_2023.csv")
+```
+
+```{r loop files points inside park 2024, message=FALSE, warning=FALSE}
+library(sf)
+library(dplyr)
+library(purrr)
+
+# creating file_name to merge wend_back
+Visual_data_Gulls_2024$file_name <- paste0(Visual_data_Gulls_2024$`bird _ID`,"_",
+                                 format(Visual_data_Gulls_2024$Start_time,"%Y-%m-%d %H:%M:%S"),"_",
+                                 format(Visual_data_Gulls_2024$end_time,"%Y-%m-%d %H:%M:%S"),".csv")
+# 1. Load wind park polygons
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+# 2. Define the folder with your CSV files
+csv_folder <- "/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/processed_data_2024"
+# 3. List all CSV files in the folder
+csv_files <- list.files(path = csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+# 4. Loop over all CSV files
+results_list <- map_dfr(csv_files, function(file) {
+  df <- read_csv(file, show_col_types = FALSE)
+  sf_points <- st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
+  wind_parks <- st_transform(wind_parks, st_crs(sf_points))
+  intersects <- st_intersects(sf_points, wind_parks)
+  sf_points$inPark <- ifelse(lengths(intersects) > 0, 1, 0)
+  sf_points$file_name <- basename(file)
+  
+  return(sf_points)
+})
+
+# 5. putting the coordinates back inside the data frame
+results_list <- results_list %>%
+  mutate(
+    longitude = st_coordinates(.)[, 1],
+    latitude = st_coordinates(.)[, 2]
+  )
+
+
+results_list <- merge(results_list, Visual_data_Gulls_2024[, c("file_name","WENT_BACK")], 
+               by = "file_name", all.x =TRUE)
+
+# 6. Filter only points inside wind parks
+points_inside <- results_list %>% filter(inPark == 1)
+
+# 7. Save to CSV
+write_csv(as.data.frame(st_drop_geometry(results_list)), "all_tracker_data_with_inPark_2024.csv")
+write_csv(as.data.frame(st_drop_geometry(points_inside)), "points_inside_wind_parks_2024.csv")
+```
+
+```{r processed data Single plots, message=FALSE, warning=FALSE}
+library(readr)
+library(ggmap)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(patchwork)
+# Google Maps API key (replace with your actual key if needed)
+api_key = "AIzaSyBfsj_cdFpvqUPxqpH6dBvSMzKaAeXj9B8"
+register_google(key = api_key)
+
+# Load the full dataset
+all_tracker_data_with_inPark_2023 <- read.csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+
+# Define the plotting function
+plot_map <- function(data, zoom = 13, points = 2, return.plot=TRUE){
+  data$altitude <- pmax(0, pmin(50, data$altitude))
+  data <- data %>% mutate(prediction = ifelse(confidence < 0.60, "Unknown", prediction))
+  data <- data %>% mutate(prediction = ifelse(altitude > 15 & prediction == "SitStand", 
+                                              "Unknown", prediction))
+  
+  myColors <- c("Float" = "#80B1D3", "Flap" = "#8DD3C7", "Soar" = "#BEBADA", "Boat" = "#FFFFB3", 
+                "Pecking" = "#FB8072", "ExFlap" = "purple", "Manouvre" = "#FDB462", 
+                "SitStand" = "#B3DE69", "TerLoco" = "#FCCDE5", "Unknown"="#D3D3D3")
+  
+  shape_scale <- scale_shape_manual(
+    name = "In Park",
+    values = c("0" = 1, "1" = 17),
+    labels = c("No", "Yes")
+  )
+  
+  data$counttime <- as.numeric(as.POSIXct(data$date_time)) # unit is seconds
+  data$date <- as.Date(data$date_time)
+  data$time <- format(as.POSIXct(data$date_time), format = "%H:%M:%S")
+  data$distance <- c(0, sqrt((diff(data$latitude)^2 + diff(data$longitude)^2))) # in meter
+  data$speed <- c(0, (data$distance[-1] / diff(data$counttime)) * 3.6) # km/h
+  data$tempchange <- c(0, diff(data$temperature) / diff(data$counttime))
+  data <- data %>% mutate(time_diff = c(0, diff(counttime)))
+  data <- data %>% mutate(tot_time = cumsum(time_diff))
+  quartz <- c(1,max(which(data$tot_time < max(data$tot_time)*1/4)),
+              max(which(data$tot_time < max(data$tot_time)/2)),
+              max(which(data$tot_time < max(data$tot_time)*3/4)),
+              nrow(data)) 
+  custom_breaks <- data$counttime[quartz]
+  custom_labels <- data$time[quartz]
+  
+  device_id <- data$device_info_serial[1]
+  start_time <- as.character(data$time[1])
+  start_date <- as.character(data$date[1])
+  end_time <- as.character(data$time[nrow(data)])
+  end_date <- as.character(data$date[nrow(data)])
+  
+  # Route plot
+  map <- get_googlemap(center = c(lon = median(data$longitude), lat = median(data$latitude)), 
+                       zoom = zoom, maptype = "satellite")
+  Route <- ggmap(map) + 
+    geom_segment(data = data, aes(x = longitude, y = latitude, col = prediction, 
+                                  xend = lead(longitude), yend = lead(latitude)),
+                 arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
+    theme_void() +
+    geom_point(data = data, aes(x = longitude, y = latitude, col = prediction, 
+                                shape = as.factor(inPark)), size = points) + 
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    theme(text = element_text(size = 10), plot.subtitle = element_text(size=7), 
+          legend.title = element_text(size=10), legend.text = element_text(size=10),
+          legend.key.height = unit(0.8, "lines"), 
+          legend.key.width = unit(0.5, "lines"), plot.margin = margin(30, 10, 30, 30)) +
+    labs(title = "Route", x = "Longitude", y = "Latitude",
+         subtitle = paste("Device ", device_id,", from ", start_date, " ",start_time, 
+                          " until ", end_date, " ", end_time,'\n', sep="")) +
+    guides(col = guide_legend(override.aes = list(shape = 16, size = 2)),
+           shape = guide_legend())
+  
+  # Additional plots
+  Altitude <- ggplot(data, aes(x = counttime, y = altitude, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Altitude over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Altitude (m)")
+  
+  Temperature <- ggplot(data, aes(x = counttime, y = temperature, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Temperature over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Temperature (°C)")
+  
+  Speed <- ggplot(data, aes(x = counttime, y = speed, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Speed over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Speed (km/h)")
+  
+  TempChange <- ggplot(data, aes(x = counttime, y = tempchange, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Change in temperature over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Temperature change per time interval (°C)")
+  
+  small_plots <- list(Altitude, Temperature, Speed, TempChange)
+  figure <- arrangeGrob(grobs = small_plots, ncol = 2, nrow = 2, padding = unit(10, "pt"))
+  GG <- arrangeGrob(Route, figure, ncol = 2, padding = unit(10, "pt"))
+  grid.newpage()
+  grid.draw(GG)
+  if (return.plot) return(GG)
+}
+
+# Create output folder
+dir.create("plot_2023", showWarnings = FALSE)
+
+# Loop over each unique file_name
+unique_files <- unique(all_tracker_data_with_inPark_2023$file_name)
+
+for (fname in unique_files) {
+  data_event <- df %>% filter(file_name == fname)
+  if (nrow(data_event) == 0) next
+  
+  plot_obj <- plot_map(data_event, zoom = 10, points = 2)
+  
+  # Sanitize filename (remove slashes or problematic characters)
+  clean_name <- gsub("[^A-Za-z0-9_]", "_", fname)
+  
+  ggsave(
+    filename = paste0("plots/", clean_name, ".pdf"),
+    plot = plot_obj,
+    scale = 2,
+    width = 5,
+    height = 5
+  )
+}
+```
+
+```{r unique events inside parks, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+#2023
+all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+
+unique_park_events_2023 <- all_tracker_data_with_inPark_2023 %>%
+                            filter(inPark == 1) %>%
+                            distinct(file_name, .keep_all=TRUE)
+
+write_csv(unique_park_events_2023, "events_inside_park_2023.csv")
+
+#2024
+all_tracker_data_with_inPark_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2024.csv")
+
+unique_park_events_2024 <- all_tracker_data_with_inPark_2024 %>%
+                            filter(inPark == 1) %>%
+                            distinct(file_name, .keep_all=TRUE)
+
+write_csv(unique_park_events_2024, "events_inside_park_2024.csv")
+```
+
+```{r Feeding events inside the park 2023, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+#load in the dataset
+all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+
+#calculate the time/ temperature difference
+all_tracker_data_with_inPark_2023 <- all_tracker_data_with_inPark_2023 %>%
+  mutate(
+    counttime = as.numeric(as.POSIXct(date_time)),
+    temperature = temperature
+  ) %>%
+  arrange(file_name, counttime) %>%
+  group_by(file_name) %>%
+  mutate(
+    temp_diff = c(0, diff(temperature)),
+    time_diff = c(0, diff(counttime)),
+    tempchange = ifelse(time_diff > 0, temp_diff / time_diff, 0),
+    temp_drop_flag = ifelse(temp_diff < -2, 1, 0),
+    feeding_event = ifelse(temp_drop_flag == 1 & WENT_BACK == 1, 1, 0)
+  ) %>%
+  ungroup()
+
+# Compute largest temperature drop per file
+temp_drops_per_file_2023 <- all_tracker_data_with_inPark_2023 %>%
+  filter(temp_diff < -2) %>%
+  group_by(file_name) %>%
+  summarise(
+    max_drop = min(temp_diff, na.rm = TRUE),
+    drop_time = date_time[which.min(temp_diff)],
+    n_drops = sum(temp_diff < 0, na.rm = TRUE),
+    feeding_event_temp = 1
+  ) %>%
+  filter(max_drop < -2) %>% 
+  arrange(max_drop)
+
+# Summarize inPark and WENT_BACK per file_name
+summary_flags <- all_tracker_data_with_inPark_2023 %>%
+  group_by(file_name) %>%
+  summarise(
+    device_info_serial = first(device_info_serial),
+    start_time = min(date_time),
+    end_time = max(date_time),
+    inPark = as.integer(any(inPark, na.rm = TRUE)),  
+    WENT_BACK = max(WENT_BACK, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Combine all indicators and apply your feeding_event logic
+processed_data_feeding_events_2023 <- summary_flags %>%
+  left_join(temp_drops_per_file_2023 %>% select(file_name, feeding_event_temp), by = "file_name") %>%
+  mutate(
+    feeding_event_temp = ifelse(is.na(feeding_event_temp), 0, feeding_event_temp),
+    feeding_event = ifelse(feeding_event_temp == 1 & WENT_BACK == 1, 1, 0)
+  ) %>%
+  select(-feeding_event_temp)
+
+#strongest feeding events inside and outside the park
+strongest_feeding_events_2023 <- all_tracker_data_with_inPark_2023 %>%
+  filter(feeding_event == 1) %>%
+  group_by(file_name, inPark) %>%
+  slice_min(order_by = temp_diff, n = 1) %>%
+  ungroup()
+
+
+# View result
+write_csv(all_tracker_data_with_inPark_2023, "all_tracker_data_with_inPark_2023.csv")
+write_csv(processed_data_feeding_events_2023, "feeding_event_per_filename_2023.csv")
+write_csv(strongest_feeding_events_2023, "Strongest_Feeding_Events_2023.csv")
+```
+
+```{r Feeding events inside the park 2024, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+#load in the dataset
+all_tracker_data_with_inPark_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2024.csv")
+
+#calculate the time/ temperature difference
+all_tracker_data_with_inPark_2024 <- all_tracker_data_with_inPark_2024 %>%
+  mutate(
+    counttime = as.numeric(as.POSIXct(date_time)),
+    temperature = temperature
+  ) %>%
+  arrange(file_name, counttime) %>%
+  group_by(file_name) %>%
+  mutate(
+    temp_diff = c(0, diff(temperature)),
+    time_diff = c(0, diff(counttime)),
+    tempchange = ifelse(time_diff > 0, temp_diff / time_diff, 0),
+    temp_drop_flag = ifelse(temp_diff < -2, 1, 0),
+    feeding_event = ifelse(temp_drop_flag == 1 & WENT_BACK == 1, 1, 0)
+  ) %>%
+  ungroup()
+
+# Compute largest temperature drop per file
+temp_drops_per_file_2024 <- all_tracker_data_with_inPark_2024 %>%
+  filter(temp_diff < -2) %>%
+  group_by(file_name) %>%
+  summarise(
+    max_drop = min(temp_diff, na.rm = TRUE),
+    drop_time = date_time[which.min(temp_diff)],
+    n_drops = sum(temp_diff < 0, na.rm = TRUE),
+    feeding_event_temp = 1
+  ) %>%
+  filter(max_drop < -2) %>% 
+  arrange(max_drop)
+
+# Summarize inPark and WENT_BACK per file_name
+summary_flags <- all_tracker_data_with_inPark_2024 %>%
+  group_by(file_name) %>%
+  summarise(
+    device_info_serial = first(device_info_serial),
+    start_time = min(date_time),
+    end_time = max(date_time),
+    inPark = as.integer(any(inPark, na.rm = TRUE)),  
+    WENT_BACK = max(WENT_BACK, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Combine all indicators and apply your feeding_event logic
+processed_data_feeding_events_2024 <- summary_flags %>%
+  left_join(temp_drops_per_file_2024 %>% select(file_name, feeding_event_temp), by = "file_name") %>%
+  mutate(
+    feeding_event_temp = ifelse(is.na(feeding_event_temp), 0, feeding_event_temp),
+    feeding_event = ifelse(feeding_event_temp == 1 & WENT_BACK == 1, 1, 0)
+  ) %>%
+  select(-feeding_event_temp)
+
+#strongest feeding events inside and outside the park
+strongest_feeding_events_2024 <- all_tracker_data_with_inPark_2024 %>%
+  filter(feeding_event == 1) %>%
+  group_by(file_name, inPark) %>%
+  slice_min(order_by = temp_diff, n = 1) %>%
+  ungroup()
+
+
+# View result
+write_csv(all_tracker_data_with_inPark_2024, "all_tracker_data_with_inPark_2024.csv")
+write_csv(processed_data_feeding_events_2024, "feeding_event_per_filename_2024.csv")
+write_csv(strongest_feeding_events_2024, "Strongest_Feeding_Events_2024.csv")
+```
+
+```{r visualising plots 2023, message=FALSE, warning=FALSE}
+# Load libraries
+library(dplyr)
+library(ggplot2)
+library(ggmap)
+library(gridExtra)
+library(grid)
+
+# Google Maps API key
+api_key = "AIzaSyBfsj_cdFpvqUPxqpH6dBvSMzKaAeXj9B8"
+register_google(key = api_key)
+
+# Load the full dataset
+Bird_df_2023 <- read_csv("/Users/Constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+
+# Define the plotting function
+plot_map <- function(data, zoom = 13, points = 2, return.plot=TRUE){
+  data$altitude <- pmax(0, pmin(50, data$altitude))
+  data <- data %>% mutate(prediction = ifelse(confidence < 0.60, "Unknown", prediction))
+  data <- data %>% mutate(prediction = ifelse(altitude > 15 & prediction == "SitStand", 
+                                              "Unknown", prediction))
+  
+  myColors <- c("Float" = "#80B1D3", "Flap" = "#8DD3C7", "Soar" = "#BEBADA", "Boat" = "#FFFFB3", 
+                "Pecking" = "#FB8072", "ExFlap" = "purple", "Manouvre" = "#FDB462", 
+                "SitStand" = "#B3DE69", "TerLoco" = "#FCCDE5", "Unknown"="#D3D3D3")
+  
+  shape_scale <- scale_shape_manual(
+    name = "In Park",
+    values = c("0" = 1, "1" = 17),
+    labels = c("No", "Yes")
+  )
+  
+  data$counttime <- as.numeric(as.POSIXct(data$date_time)) # unit is seconds
+  data$date <- as.Date(data$date_time)
+  data$time <- format(as.POSIXct(data$date_time), format = "%H:%M:%S")
+  data$distance <- c(0, sqrt((diff(data$latitude)^2 + diff(data$longitude)^2))) # in meter
+  data$speed <- c(0, (data$distance[-1] / diff(data$counttime)) * 3.6) # km/h
+  data$tempchange <- c(0, diff(data$temperature) / diff(data$counttime))
+  data <- data %>% mutate(time_diff = c(0, diff(counttime)))
+  data <- data %>% mutate(tot_time = cumsum(time_diff))
+  quartz <- c(1,max(which(data$tot_time < max(data$tot_time)*1/4)),
+              max(which(data$tot_time < max(data$tot_time)/2)),
+              max(which(data$tot_time < max(data$tot_time)*3/4)),
+              nrow(data)) 
+  custom_breaks <- data$counttime[quartz]
+  custom_labels <- data$time[quartz]
+  
+  device_id <- data$device_info_serial[1]
+  start_time <- as.character(data$time[1])
+  start_date <- as.character(data$date[1])
+  end_time <- as.character(data$time[nrow(data)])
+  end_date <- as.character(data$date[nrow(data)])
+  
+  # Route plot
+  map <- get_googlemap(center = c(lon = median(data$longitude), lat = median(data$latitude)), 
+                       zoom = zoom, maptype = "satellite")
+  Route <- ggmap(map) + 
+    geom_segment(data = data, aes(x = longitude, y = latitude, col = prediction, 
+                                  xend = lead(longitude), yend = lead(latitude)),
+                 arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
+    theme_void() +
+    geom_point(data = data, aes(x = longitude, y = latitude, col = prediction, 
+                                shape = as.factor(inPark)), size = points) + 
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    theme(text = element_text(size = 10), plot.subtitle = element_text(size=7), 
+          legend.title = element_text(size=10), legend.text = element_text(size=10),
+          legend.key.height = unit(0.8, "lines"), 
+          legend.key.width = unit(0.5, "lines"), plot.margin = margin(30, 10, 30, 30)) +
+    labs(title = "Route", x = "Longitude", y = "Latitude",
+         subtitle = paste("Device ", device_id,", from ", start_date, " ",start_time, 
+                          " until ", end_date, " ", end_time,'\n', sep="")) +
+    guides(col = guide_legend(override.aes = list(shape = 16, size = 2)),
+           shape = guide_legend())
+  
+  # Additional plots
+  Altitude <- ggplot(data, aes(x = counttime, y = altitude, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Altitude over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Altitude (m)")
+  
+  Temperature <- ggplot(data, aes(x = counttime, y = temperature, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Temperature over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Temperature (°C)")
+  
+  Speed <- ggplot(data, aes(x = counttime, y = speed, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Speed over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Speed (km/h)")
+  
+  TempChange <- ggplot(data, aes(x = counttime, y = tempchange, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Change in temperature over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Temperature change per time interval (°C)")
+  
+  small_plots <- list(Altitude, Temperature, Speed, TempChange)
+  figure <- arrangeGrob(grobs = small_plots, ncol = 2, nrow = 2, padding = unit(10, "pt"))
+  GG <- arrangeGrob(Route, figure, ncol = 2, padding = unit(10, "pt"))
+  grid.newpage()
+  grid.draw(GG)
+  if (return.plot) return(GG)
+}
+
+# Loop over each unique file_name
+unique_files <- unique(Bird_df_2023$file_name)
+
+for (fname in unique_files) {
+  data_event <- Bird_df_2023 %>% filter(file_name == fname)
+  if (nrow(data_event) == 0) next
+  
+  plot_obj <- plot_map(data_event, zoom = 10, points = 2)
+  
+  # Sanitize filename (remove slashes or problematic characters)
+  clean_name <- gsub("[^A-Za-z0-9_]", "_", fname)
+  
+  ggsave(
+    filename = paste0("plots/", clean_name, ".pdf"),
+    plot = plot_obj,
+    scale = 2,
+    width = 5,
+    height = 5
+  )
+}
+```
+
+```{r visualising plots 2024, message=FALSE, warning=FALSE}
+# Load libraries
+library(dplyr)
+library(ggplot2)
+library(ggmap)
+library(gridExtra)
+library(grid)
+library(readr)
+
+# Google Maps API key
+api_key = "AIzaSyBfsj_cdFpvqUPxqpH6dBvSMzKaAeXj9B8"
+register_google(key = api_key)
+
+# Load the full dataset
+Bird_df_2024 <- read_csv("/Users/Constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2024.csv")
+
+# Define the plotting function
+plot_map <- function(data, zoom = 13, points = 2, return.plot=TRUE){
+  data$altitude <- pmax(0, pmin(50, data$altitude))
+  data <- data %>% mutate(prediction = ifelse(confidence < 0.60, "Unknown", prediction))
+  data <- data %>% mutate(prediction = ifelse(altitude > 15 & prediction == "SitStand", 
+                                              "Unknown", prediction))
+  
+  myColors <- c("Float" = "#80B1D3", "Flap" = "#8DD3C7", "Soar" = "#BEBADA", "Boat" = "#FFFFB3", 
+                "Pecking" = "#FB8072", "ExFlap" = "purple", "Manouvre" = "#FDB462", 
+                "SitStand" = "#B3DE69", "TerLoco" = "#FCCDE5", "Unknown"="#D3D3D3")
+  
+  shape_scale <- scale_shape_manual(
+    name = "In Park",
+    values = c("0" = 1, "1" = 17),
+    labels = c("No", "Yes")
+  )
+  
+  data$counttime <- as.numeric(as.POSIXct(data$date_time)) # unit is seconds
+  data$date <- as.Date(data$date_time)
+  data$time <- format(as.POSIXct(data$date_time), format = "%H:%M:%S")
+  data$distance <- c(0, sqrt((diff(data$latitude)^2 + diff(data$longitude)^2))) # in meter
+  data$speed <- c(0, (data$distance[-1] / diff(data$counttime)) * 3.6) # km/h
+  data$tempchange <- c(0, diff(data$temperature) / diff(data$counttime))
+  data <- data %>% mutate(time_diff = c(0, diff(counttime)))
+  data <- data %>% mutate(tot_time = cumsum(time_diff))
+  quartz <- c(1,max(which(data$tot_time < max(data$tot_time)*1/4)),
+              max(which(data$tot_time < max(data$tot_time)/2)),
+              max(which(data$tot_time < max(data$tot_time)*3/4)),
+              nrow(data)) 
+  custom_breaks <- data$counttime[quartz]
+  custom_labels <- data$time[quartz]
+  
+  device_id <- data$device_info_serial[1]
+  start_time <- as.character(data$time[1])
+  start_date <- as.character(data$date[1])
+  end_time <- as.character(data$time[nrow(data)])
+  end_date <- as.character(data$date[nrow(data)])
+  
+  # Route plot
+  map <- get_googlemap(center = c(lon = median(data$longitude), lat = median(data$latitude)), 
+                       zoom = zoom, maptype = "satellite")
+  Route <- ggmap(map) + 
+    geom_segment(data = data, aes(x = longitude, y = latitude, col = prediction, 
+                                  xend = lead(longitude), yend = lead(latitude)),
+                 arrow = arrow(length = unit(0.2, "cm")), color = "black") + 
+    theme_void() +
+    geom_point(data = data, aes(x = longitude, y = latitude, col = prediction, 
+                                shape = as.factor(inPark)), size = points) + 
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    theme(text = element_text(size = 10), plot.subtitle = element_text(size=7), 
+          legend.title = element_text(size=10), legend.text = element_text(size=10),
+          legend.key.height = unit(0.8, "lines"), 
+          legend.key.width = unit(0.5, "lines"), plot.margin = margin(30, 10, 30, 30)) +
+    labs(title = "Route", x = "Longitude", y = "Latitude",
+         subtitle = paste("Device ", device_id,", from ", start_date, " ",start_time, 
+                          " until ", end_date, " ", end_time,'\n', sep="")) +
+    guides(col = guide_legend(override.aes = list(shape = 16, size = 2)),
+           shape = guide_legend())
+  
+  # Additional plots
+  Altitude <- ggplot(data, aes(x = counttime, y = altitude, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Altitude over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Altitude (m)")
+  
+  Temperature <- ggplot(data, aes(x = counttime, y = temperature, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Temperature over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Temperature (°C)")
+  
+  Speed <- ggplot(data, aes(x = counttime, y = speed, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Speed over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Speed (km/h)")
+  
+  TempChange <- ggplot(data, aes(x = counttime, y = tempchange, shape = as.factor(inPark))) + 
+    geom_point(aes(col = prediction), size = points, show.legend = FALSE) + 
+    geom_line(color = "Gray", show.legend = FALSE) +
+    scale_color_manual(name = "Behaviour", values = myColors) + 
+    shape_scale +
+    scale_x_continuous(breaks = custom_breaks, labels = custom_labels) + 
+    ggtitle("Change in temperature over time") + 
+    theme_classic(base_size = 10) +
+    theme(plot.margin = margin(15, 15, 30, 5)) +
+    labs(x = "Time", y = "Temperature change per time interval (°C)")
+  
+  small_plots <- list(Altitude, Temperature, Speed, TempChange)
+  figure <- arrangeGrob(grobs = small_plots, ncol = 2, nrow = 2, padding = unit(10, "pt"))
+  GG <- arrangeGrob(Route, figure, ncol = 2, padding = unit(10, "pt"))
+  grid.newpage()
+  grid.draw(GG)
+  if (return.plot) return(GG)
+}
+
+# Loop over each unique file_name
+unique_files <- unique(Bird_df_2024$file_name)
+
+for (fname in unique_files) {
+  data_event <- Bird_df_2024 %>% filter(file_name == fname)
+  if (nrow(data_event) == 0) next
+  
+  plot_obj <- plot_map(data_event, zoom = 10, points = 2)
+  
+  # Sanitize filename (remove slashes or problematic characters)
+  clean_name <- gsub("[^A-Za-z0-9_]", "_", fname)
+  
+  ggsave(
+    filename = paste0("plots/", clean_name, ".pdf"),
+    plot = plot_obj,
+    scale = 2,
+    width = 5,
+    height = 5
+  )
+}
+```
+
+```{r Behavior inside the parks, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+#2023
+all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+points_inside_wind_parks_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/points_inside_wind_parks_2023.csv")
+
+ExFlap_Manouvre_events_2023 <- all_tracker_data_with_inPark_2023 %>%
+                            filter(prediction == "ExFlap" | prediction =="Manouvre" | prediction =="Flap")
+
+table(ExFlap_Manouvre_events_2023$inPark, ExFlap_Manouvre_events_2023$prediction)
+
+#2024
+all_tracker_data_with_inPark_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2024.csv")
+points_inside_wind_parks_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/points_inside_wind_parks_2024.csv")
+
+ExFlap_Manouvre_events_2024 <- all_tracker_data_with_inPark_2024 %>%
+                            filter(prediction == "ExFlap" | prediction =="Manouvre" | prediction=="Flap")
+table(ExFlap_Manouvre_events_2024$inPark, ExFlap_Manouvre_events_2024$prediction)
+
+```
+
+```{r convex hull points 2023, message=FALSE, warning=FALSE}
+library(sf)
+sf::sf_use_s2(FALSE)
+library(dplyr)  
+library(readr)  
+library(ggplot2)    
+library(lwgeom) 
+# 1. Load wind park polygons (shapefile)
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+#convex hull events
+strongest_feeding_events_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Strongest_Feeding_Events_2023.csv")
+strongest_feeding_outside_2023 <- strongest_feeding_events_2023 %>%
+  filter(inPark == 0)
+strongest_feeding_inside_2023 <- strongest_feeding_events_2023 %>%
+  filter(inPark == 1)
+
+# Convert tracker data to an `sf` object
+points_sf_inside <- st_as_sf(
+  strongest_feeding_inside_2023,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+points_sf_outside <- st_as_sf(
+  strongest_feeding_outside_2023,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+
+hull_inside <- st_convex_hull(st_union(points_sf_inside))
+hull_inside_windpark <- st_intersection(hull_inside,wind_parks)
+hull_outside <- st_convex_hull(st_union(points_sf_outside))
+
+hull_bbox <- st_bbox(hull_outside)
+
+buffer_factor <- 0.1
+
+# plotting the results
+Convex_hull_2023 <- ggplot() +
+  geom_sf(data = wind_parks, aes(color = "Wind Parks"), fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = points_sf_inside, aes(color = "Points Inside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = points_sf_outside, aes(color = "Points Outside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = hull_inside_windpark, aes(color = "Convex Hull Inside Wind Park"), fill = NA, size = 1.2) +
+  geom_sf(data = hull_outside, aes(color = "Convex Hull Outside Wind Park"), fill = NA, size = 1.2) +
+  
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Wind Parks" = "blue",
+      "Points Inside The Wind Park" = "darkred",
+      "Points Outside The Wind Park" = "blue",
+      "Convex Hull Inside Wind Park" = "red",
+      "Convex Hull Outside Wind Park" = "black"
+    )
+  ) +
+  coord_sf(
+    xlim = c(hull_bbox$xmin - buffer_factor * (hull_bbox$xmax - hull_bbox$xmin), hull_bbox$xmax + buffer_factor * (hull_bbox$xmax -      hull_bbox$xmin)), 
+    ylim = c(hull_bbox$ymin - buffer_factor * (hull_bbox$ymax - hull_bbox$ymin), hull_bbox$ymax + buffer_factor * (hull_bbox$ymax - hull_bbox$ymin)), expand = TRUE) +
+  theme_minimal()
+
+ggsave(
+    filename =  "Convex_Hull_2023.pdf",
+    plot = Convex_hull_2023,
+    scale = 1,
+    width = 5,
+    height = 5
+  )
+
+print(Convex_hull_2023)
+
+area_m2_inside_2023 <- sum(st_area(hull_inside_windpark))
+area_km2_inside_2023 <- as.numeric(area_m2_inside_2023) / 1e6
+
+hull_outside_windpark <- st_intersection(hull_outside)
+area_m2_outside_2023 <- sum(st_area(hull_outside_windpark))
+area_km2_outside_2023 <- as.numeric(area_m2_outside_2023) / 1e6
+
+
+
+#total convex area for all the feeding events
+points_sf_total<- st_as_sf(
+  strongest_feeding_events_2023,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+hull_total_2023 <- st_convex_hull(st_union(points_sf_total))
+area_m2_total_2023 <- sum(st_area(hull_total_2023))
+area_km2_total_2023 <- as.numeric(area_m2_total_2023)/1e6
+
+```
+
+```{r convex hull points 2024, message=FALSE, warning=FALSE}
+library(sf)
+sf::sf_use_s2(FALSE)
+library(dplyr)  
+library(readr)  
+library(ggplot2)    
+library(lwgeom) 
+# 1. Load wind park polygons (shapefile)
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+#convex hull events
+strongest_feeding_events_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Strongest_Feeding_Events_2024.csv")
+strongest_feeding_outside_2024 <- strongest_feeding_events_2024 %>%
+  filter(inPark == 0)
+strongest_feeding_inside_2024 <- strongest_feeding_events_2024 %>%
+  filter(inPark == 1)
+
+# Convert tracker data to an `sf` object
+points_sf_inside <- st_as_sf(
+  strongest_feeding_inside_2024,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+points_sf_outside <- st_as_sf(
+  strongest_feeding_outside_2024,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+
+hull_inside <- st_convex_hull(st_union(points_sf_inside))
+hull_inside_windpark <- st_intersection(hull_inside,wind_parks)
+hull_outside <- st_convex_hull(st_union(points_sf_outside))
+
+hull_bbox <- st_bbox(hull_outside)
+
+buffer_factor <- 0.1
+
+# plotting the results
+Convex_hull_2024 <- ggplot() +
+  geom_sf(data = wind_parks, aes(color = "Wind Parks"), fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = points_sf_inside, aes(color = "Points Inside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = points_sf_outside, aes(color = "Points Outside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = hull_inside_windpark, aes(color = "Convex Hull Inside Wind Park"), fill = NA, size = 1.2) +
+  geom_sf(data = hull_outside, aes(color = "Convex Hull Outside Wind Park"), fill = NA, size = 1.2) +
+  
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Wind Parks" = "blue",
+      "Points Inside The Wind Park" = "darkred",
+      "Points Outside The Wind Park" = "grey",
+      "Convex Hull Inside Wind Park" = "red",
+      "Convex Hull Outside Wind Park" = "black"
+    )
+  ) +
+  coord_sf(
+    xlim = c(hull_bbox$xmin - buffer_factor * (hull_bbox$xmax - hull_bbox$xmin), hull_bbox$xmax + buffer_factor * (hull_bbox$xmax -      hull_bbox$xmin)), 
+    ylim = c(hull_bbox$ymin - buffer_factor * (hull_bbox$ymax - hull_bbox$ymin), hull_bbox$ymax + buffer_factor * (hull_bbox$ymax - hull_bbox$ymin)), expand = TRUE) +
+  theme_minimal()
+
+ggsave(
+    filename =  "Convex_Hull_2024.pdf",
+    plot = Convex_hull_2024,
+    scale = 1,
+    width = 5,
+    height = 5
+  )
+
+print(Convex_hull_2024)
+
+area_m2_inside_2024 <- sum(st_area(hull_inside_windpark))
+area_km2_inside_2024 <- as.numeric(area_m2_inside_2024) / 1e6
+
+hull_outside_windpark <- st_intersection(hull_outside)
+area_m2_outside_2024 <- sum(st_area(hull_outside_windpark))
+area_km2_outside_2024 <- as.numeric(area_m2_outside_2024) / 1e6
+
+#total convex area for all the feeding events
+points_sf_total<- st_as_sf(
+  strongest_feeding_events_2024,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+hull_total_2024 <- st_convex_hull(st_union(points_sf_total))
+area_m2_total_2024 <- sum(st_area(hull_total_2024))
+area_km2_total_2024 <- as.numeric(area_m2_total_2024)/1e6
+```
+
+```{r time differences inside and outside the park, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+
+#2023
+all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+
+feeding_event_durations_2023 <- all_tracker_data_with_inPark_2023 %>%
+  group_by(file_name) %>%
+  filter(any(feeding_event == 1)) %>%
+  summarise(
+    device_info_serial = first(as.numeric(device_info_serial)),
+    start_time = min(date_time),
+    end_time = max(date_time),
+    duration_minutes = as.numeric(difftime(end_time, start_time, units = "mins")),
+    inPark = as.integer(any(feeding_event== 1 & inPark == 1)),
+    .groups = "drop"
+  )
+
+write.csv(feeding_event_durations_2023, "Feeding_Events_Duration_2023.csv")
+
+#2024
+all_tracker_data_with_inPark_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2024.csv")
+
+feeding_event_durations_2024 <- all_tracker_data_with_inPark_2024 %>%
+  group_by(file_name) %>%
+  filter(any(feeding_event == 1)) %>%
+  summarise(
+    device_info_serial = first(as.numeric(device_info_serial)),
+    start_time = min(date_time),
+    end_time = max(date_time),
+    duration_minutes = as.numeric(difftime(end_time, start_time, units = "mins")),
+    inPark = as.integer(any(feeding_event== 1 & inPark == 1)),
+    .groups = "drop"
+  )
+
+write.csv(feeding_event_durations_2024, "Feeding_Events_Duration_2024.csv")
+```
+
+```{r sub 1: do birds feed inside wind parks?, message=FALSE, warning=FALSE}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(scales)
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+
+feeding_events_per_file_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/feeding_event_per_filename_2023.csv")
+feeding_events_per_file_2023$year <- 2023
+feeding_events_per_file_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/feeding_event_per_filename_2024.csv")
+feeding_events_per_file_2024$year <- 2024
+feeding_events_per_file_total <- rbind(feeding_events_per_file_2023, feeding_events_per_file_2024) 
+
+#logistic model
+model <- glmer(feeding_event ~ inPark + (1 | device_info_serial) + (1 | year), data = feeding_events_per_file_total, family = binomial)
+summary(model)
+
+# Calculate counts for each category
+summary_data_total <- feeding_events_per_file_total %>%
+  group_by(year)%>%
+  summarise(
+    Feeding_Inside_Park = sum(feeding_event == 1 & inPark == 1)/n(),
+    Feeding_Outside_Park = sum(feeding_event == 1 & inPark == 0)/n(),
+    No_Feeding = sum(feeding_event == 0)/n()
+  )  %>% 
+  pivot_longer(cols = c(Feeding_Inside_Park, Feeding_Outside_Park, No_Feeding),
+               names_to = "Event_Type",
+               values_to = "Proportion")
+
+# Step 2: Plot the data
+Proportion_Feeding_Events <- ggplot(summary_data_total, aes(x = factor(year), y = Proportion, fill = Event_Type)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  scale_fill_manual(values = c("Feeding_Inside_Park" = "red",
+                               "Feeding_Outside_Park" = "blue",
+                               "No_Feeding" = "grey"),
+                    labels = c("Feeding_Inside_Park" = "Feeding Inside the Park",
+                               "Feeding_Outside_Park" = "Feeding Outside the park",
+                               "No_Feeding" = "No Feeding Event"))+
+  ylab("Proportion of Events") +
+  xlab("Year") +
+  theme_minimal(base_size = 14) +
+  labs(fill = "Event Type") +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1))
+
+ggsave(
+    filename =  "Proportion_Feeding_event.pdf",
+    plot = Proportion_Feeding_Events,
+    scale = 1,
+    width = 5,
+    height = 5
+  )
+
+print(Proportion_Feeding_Events)
+```
+
+```{r sub 2: does the duration of the feeding have the same length as the feeding on the open sea?, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)    
+library(lme4)
+library(lmerTest)
+library(ggplot2)  
+
+#2023
+feeding_event_durations_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Duration_2023.csv")
+feeding_event_durations_2023$year <- 2023
+feeding_event_durations_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Duration_2024.csv")
+feeding_event_durations_2024$year <- 2024
+
+feeding_event_durations_total <- rbind(feeding_event_durations_2023, feeding_event_durations_2024)
+
+#logistic model
+model <- lmer(duration_minutes ~ inPark + (1 | device_info_serial) + (1 | year), data = feeding_event_durations_total)
+summary(model)
+
+#preparation for plotting
+feeding_event_durations_total$inPark <- factor(feeding_event_durations_total$inPark, 
+                                               levels = c(0, 1), 
+                                               labels = c("Outside", "Inside"))
+feeding_event_durations_total$year <- as.factor(feeding_event_durations_total$year)
+
+# Create the grouped boxplot
+Proportion_Feeding_Duration <- ggplot(feeding_event_durations_total, aes(x = year, y = duration_minutes, fill = inPark)) +
+  geom_boxplot(position = position_dodge(width = 0.8)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Duration (minutes)",
+    fill = "Wind park"
+  )
+
+ggsave(
+    filename =  "Proportion_Feeding_Event_Duration.pdf",
+    plot = Proportion_Feeding_Duration,
+    scale = 1,
+    width = 5,
+    height = 5
+  )
+
+#calculating mean, min, max duration
+summary_stats_duration <- feeding_event_durations_total %>%
+  group_by(year, inPark) %>%
+  summarise(
+    mean_duration = mean(duration_minutes),
+    min_duration = min(duration_minutes),
+    max_duration = max(duration_minutes),
+    .groups = 'drop'
+  )
+
+print(summary_stats)
+```
+
+```{r sub 3: do the LBBGs need to move more actively inside the parks?, message=FALSE, warning=FALSE}
+library(readr)   
+library(dplyr)    
+library(lme4)
+library(lmerTest)
+library(ggplot2)  
+
+#2023
+# 2. Define the folder with your CSV files
+csv_folder <- "/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/processed_data_2023"
+# 3. List all CSV files in the folder
+file_list_2023 <- list.files(path = csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+# Initialize a data frame to store results
+results_2023 <- data.frame(
+  file_name = character(),
+  proportion_ExMan = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each file
+for (file in file_list_2023) {
+  
+  # Read the CSV file
+  data <- read.csv(file)
+  
+  # Filter rows with confidence >= 0.5
+  filtered_data_2023 <- subset(data, confidence >= 0.5)
+  total_behaviors <- nrow(filtered_data_2023)
+  prop_ExMan <- sum(filtered_data_2023$prediction == "ExFlap", filtered_data_2023$prediction == "Manouvre") / total_behaviors
+  
+  results_2023 <- rbind(results_2023, data.frame(
+    file_name = basename(file),
+    proportion_ExMan = prop_ExMan,
+    stringsAsFactors = FALSE
+  ))
+    }
+
+all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+strongest_feeding_events_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Strongest_Feeding_Events_2023.csv")
+
+#filtering the behaviors
+files_ExMan_2023 <- all_tracker_data_with_inPark_2023[all_tracker_data_with_inPark_2023$file_name %in% strongest_feeding_events_2023$file_name, ]
+
+files_ExMan_2023 <- left_join(strongest_feeding_events_2023, results_2023, by = "file_name")
+files_ExMan_2023$year <- 2023
+
+#2024
+# 2. Define the folder with your CSV files
+csv_folder <- "/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/processed_data_2024"
+# 3. List all CSV files in the folder
+file_list_2024 <- list.files(path = csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+# Initialize a data frame to store results
+results_2024 <- data.frame(
+  file_name = character(),
+  proportion_ExMan = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each file
+for (file in file_list_2024) {
+  
+  # Read the CSV file
+  data <- read.csv(file)
+  
+  # Filter rows with confidence >= 0.5
+  filtered_data_2024 <- subset(data, confidence >= 0.5)
+  
+  total_behaviors <- nrow(filtered_data_2024)
+  prop_ExMan <- sum(filtered_data_2024$prediction == "ExFlap", filtered_data_2024$prediction == "Manouvre") / total_behaviors
+  
+   results_2024 <- rbind(results_2024, data.frame(
+    file_name = basename(file),
+    proportion_ExMan = prop_ExMan,
+    stringsAsFactors = FALSE
+  ))
+    }
+
+all_tracker_data_with_inPark_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2024.csv")
+strongest_feeding_events_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Strongest_Feeding_Events_2024.csv")
+
+#filtering the behaviors
+files_ExMan_2024 <- all_tracker_data_with_inPark_2024[all_tracker_data_with_inPark_2024$file_name %in% strongest_feeding_events_2024$file_name, ]
+
+files_ExMan_2024 <- left_join(strongest_feeding_events_2024, results_2024, by = "file_name")
+files_ExMan_2024$year <- 2024
+#binding together and analysing
+files_ExMan <- rbind(files_ExMan_2023, files_ExMan_2024)
+
+model <- lmer(proportion_ExMan ~ inPark + (1 | device_info_serial) + (1 | year), data = files_ExMan)
+summary(model)
+
+# First make sure inPark and year are factors with nice labels
+files_ExMan$inPark <- factor(files_ExMan$inPark,
+                             levels = c(0, 1),
+                             labels = c("Outside", "Inside"))
+files_ExMan$year <- as.factor(files_ExMan$year)
+
+# Then create a grouped boxplot, color by inPark
+Proportion_ExMan <- ggplot(files_ExMan, aes(x = year, y = proportion_ExMan, fill = inPark)) + 
+  geom_boxplot(position = position_dodge(width = 0.8)) + 
+  scale_fill_manual(values = c("blue", "red")) + 
+  theme_minimal() + 
+  labs(
+    x = "Year",
+    y = "Proportion of ExFlap or Manouvre",
+    fill = "Wind Park"
+  )
+
+#ggsave(
+#   filename =  "Proportion_ExMan.pdf",
+#   plot = Proportion_ExMan,
+#    scale = 1,
+#    width = 5,
+#    height = 5
+#  )
+
+#calculating mean, min, max proportion_ExMan
+summary_stats_ExMan <- files_ExMan %>%
+  group_by(year, inPark) %>%
+  summarise(
+    mean_proportion = mean(proportion_ExMan),
+    min_proportion = min(proportion_ExMan),
+    max_proportion = max(proportion_ExMan),  # Fixed column name
+    .groups = 'drop'
+  )
+
+print(summary_stats_ExMan)
+```
+
+```{r overlapping between the trackers and wind park, message=FALSE, warning=FALSE}
+library(sf)
+sf::sf_use_s2(FALSE)
+library(dplyr)   
+library(readr)   
+library(ggplot2)    
+all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
+
+# 1. Load wind park polygons (shapefile)
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+# 2. Load tracker coordinates (CSV or dataframe)
+tracker_data <- all_tracker_data_with_inPark_2023%>%
+  filter(file_name=="5615_2023-06-13 00:04:30_2023-06-13 10:00:38.csv")
+
+# Convert tracker data to an `sf` object
+tracker_sf <- st_as_sf(
+  tracker_data,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+#transforming wind_parks to match tracker_sf CRS
+wind_parks <- st_transform(wind_parks, st_crs(tracker_sf))
+
+# Perform spatial join to find points inside wind parks
+overlap_results <- st_join(
+  tracker_sf,       
+  wind_parks,       
+  join = st_intersects,
+  left = FALSE      
+)
+
+#filtering the feeding events
+feeding_events <- tracker_sf[tracker_sf$feeding_event== 1, ]
+
+# plotting results
+buffer <- 0.2
+bbox <- st_bbox(overlap_results)
+
+ggplot() +
+  geom_sf(data = wind_parks, aes(color = "Wind Parks"), fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = tracker_sf, aes(color = "Outside Wind Park"), size = 1, alpha = 0.5) +
+  geom_path(data = st_coordinates(tracker_sf), aes(x = X, y = Y), color = "darkgrey") +
+  geom_sf(data = feeding_events, aes(color = "Feeding Events"), size = 3, shape = 17, alpha = 1) +
+  geom_sf(data = overlap_results, aes(color = "Inside Wind Park"), size = 1.5, alpha = 0.5) +
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Wind Parks" = "blue",
+      "Outside Wind Park" = "blue",
+      "Feeding Events" = "black",
+      "Inside Wind Park" = "red")
+  ) +
+  coord_sf(
+    xlim = c(bbox["xmin"] - buffer, bbox["xmax"] + buffer),
+    ylim = c(bbox["ymin"] - buffer, bbox["ymax"] + buffer),
+    expand = FALSE
+  ) +
+  theme_minimal()
+
+# plot of just the points inside the park
+buffer <- 0.2
+bbox <- st_bbox(overlap_results)
+ggplot() + 
+   geom_sf(data = wind_parks, fill = NA) + 
+   geom_sf(data = overlap_results, color = "red", size = 0.5) +
+   coord_sf(
+       xlim = c(bbox["xmin"] - buffer, bbox["xmax"] + buffer),
+       ylim = c(bbox["ymin"] - buffer, bbox["ymax"] + buffer),
+       expand = FALSE)
+```
