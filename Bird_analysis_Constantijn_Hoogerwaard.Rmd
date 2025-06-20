@@ -171,8 +171,9 @@ library(gridExtra)
 library(grid)
 library(ggplot2)
 library(patchwork)
-# Google Maps API key (replace with your actual key if needed)
-api_key = "AIzaSyBfsj_cdFpvqUPxqpH6dBvSMzKaAeXj9B8"
+
+# Google Maps API key
+api_key = "your own API key"
 register_google(key = api_key)
 
 # Load the full dataset
@@ -343,10 +344,9 @@ write_csv(unique_park_events_2024, "events_inside_park_2024.csv")
 library(readr)
 library(dplyr)
 
-#load in the dataset
 all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/all_tracker_data_with_inPark_2023.csv")
 
-#calculate the time/ temperature difference
+#calculating the time/ temperature difference
 all_tracker_data_with_inPark_2023 <- all_tracker_data_with_inPark_2023 %>%
   mutate(
     counttime = as.numeric(as.POSIXct(date_time)),
@@ -363,7 +363,7 @@ all_tracker_data_with_inPark_2023 <- all_tracker_data_with_inPark_2023 %>%
   ) %>%
   ungroup()
 
-# Compute largest temperature drop per file
+# calculating the largest temperature drop per file
 temp_drops_per_file_2023 <- all_tracker_data_with_inPark_2023 %>%
   filter(temp_diff < -2) %>%
   group_by(file_name) %>%
@@ -376,7 +376,7 @@ temp_drops_per_file_2023 <- all_tracker_data_with_inPark_2023 %>%
   filter(max_drop < -2) %>% 
   arrange(max_drop)
 
-# Summarize inPark and WENT_BACK per file_name
+# Summarizing inPark and WENT_BACK per file_name
 summary_flags <- all_tracker_data_with_inPark_2023 %>%
   group_by(file_name) %>%
   summarise(
@@ -492,7 +492,7 @@ library(gridExtra)
 library(grid)
 
 # Google Maps API key
-api_key = "AIzaSyBfsj_cdFpvqUPxqpH6dBvSMzKaAeXj9B8"
+api_key = "your own API key"
 register_google(key = api_key)
 
 # Load the full dataset
@@ -643,7 +643,7 @@ library(grid)
 library(readr)
 
 # Google Maps API key
-api_key = "AIzaSyBfsj_cdFpvqUPxqpH6dBvSMzKaAeXj9B8"
+api_key = "your own API key"
 register_google(key = api_key)
 
 # Load the full dataset
