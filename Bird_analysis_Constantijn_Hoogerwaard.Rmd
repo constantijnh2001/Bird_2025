@@ -673,6 +673,13 @@ points_sf_outside <- st_as_sf(
   crs = 4326  # Set coordinate system to WGS84
 )
 
+forteiland_point <- st_as_sf(
+  data.frame(name = "Forteiland IJmuiden colony", 
+             longitude = 4.5767, 
+             latitude = 52.465),
+  coords = c("longitude", "latitude"),
+  crs = 4326
+)
 
 hull_inside <- st_convex_hull(st_union(points_sf_inside))
 hull_inside_windpark <- st_intersection(hull_inside,wind_parks)
@@ -687,6 +694,7 @@ Convex_hull_2023 <- ggplot() +
   geom_sf(data = wind_parks, aes(color = "Wind Parks"), fill = "lightblue", alpha = 0.5) +
   geom_sf(data = points_sf_inside, aes(color = "Points Inside The Wind Park"), size = 1, alpha = 1) +
   geom_sf(data = points_sf_outside, aes(color = "Points Outside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = forteiland_point, aes(color = "Colony Location Forteiland"), size = 3, alpha = 1, shape = 17) +
   geom_sf(data = hull_inside_windpark, aes(color = "Convex Hull Inside Wind Park"), fill = NA, size = 1.2) +
   geom_sf(data = hull_outside, aes(color = "Convex Hull Outside Wind Park"), fill = NA, size = 1.2) +
   
@@ -695,7 +703,8 @@ Convex_hull_2023 <- ggplot() +
     values = c(
       "Wind Parks" = "blue",
       "Points Inside The Wind Park" = "darkred",
-      "Points Outside The Wind Park" = "blue",
+      "Points Outside The Wind Park" = "grey",
+      "Colony Location Forteiland" = "purple",
       "Convex Hull Inside Wind Park" = "red",
       "Convex Hull Outside Wind Park" = "black"
     )
@@ -780,6 +789,7 @@ Convex_hull_2024 <- ggplot() +
   geom_sf(data = wind_parks, aes(color = "Wind Parks"), fill = "lightblue", alpha = 0.5) +
   geom_sf(data = points_sf_inside, aes(color = "Points Inside The Wind Park"), size = 1, alpha = 1) +
   geom_sf(data = points_sf_outside, aes(color = "Points Outside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = forteiland_point, aes(color = "Colony Location Forteiland"), size = 3, alpha = 1, shape = 17) +
   geom_sf(data = hull_inside_windpark, aes(color = "Convex Hull Inside Wind Park"), fill = NA, size = 1.2) +
   geom_sf(data = hull_outside, aes(color = "Convex Hull Outside Wind Park"), fill = NA, size = 1.2) +
   
@@ -789,6 +799,7 @@ Convex_hull_2024 <- ggplot() +
       "Wind Parks" = "blue",
       "Points Inside The Wind Park" = "darkred",
       "Points Outside The Wind Park" = "grey",
+      "Colony Location Forteiland" = "purple",
       "Convex Hull Inside Wind Park" = "red",
       "Convex Hull Outside Wind Park" = "black"
     )
@@ -825,6 +836,8 @@ hull_total_2024 <- st_convex_hull(st_union(points_sf_total))
 area_m2_total_2024 <- sum(st_area(hull_total_2024))
 area_km2_total_2024 <- as.numeric(area_m2_total_2024)/1e6
 ```
+
+
 
 ```{r time differences inside and outside the park, message=FALSE, warning=FALSE}
 library(readr)
@@ -943,7 +956,9 @@ feeding_event_durations_2024$year <- 2024
 feeding_event_durations_total <- rbind(feeding_event_durations_2023, feeding_event_durations_2024)
 
 #logistic model
-model <- lmer(duration_minutes ~ inPark + (1 | device_info_serial) + (1 | year), data = feeding_event_durations_total)
+model <- glmmTMB(duration_minutes ~ inPark + (1 | device_info_serial) + (1 | year),
+  data = feeding_event_durations_total, family = Gamma(link = "log")
+)
 summary(model)
 
 #preparation for plotting
@@ -984,7 +999,7 @@ summary_stats_duration <- feeding_event_durations_total %>%
 print(summary_stats)
 ```
 
-```{r sub 3: do the LBBGs need to move more actively inside the parks?, message=FALSE, warning=FALSE}
+```{r sub 3.1 :do the LBBGs need to move more actively inside the parks?, message = FASE, warning=FALSE}
 library(readr)   
 library(dplyr)    
 library(lme4)
@@ -999,7 +1014,8 @@ file_list_2023 <- list.files(path = csv_folder, pattern = "\\.csv$", full.names 
 # Initialize a data frame to store results
 results_2023 <- data.frame(
   file_name = character(),
-  count_ExMan = numeric(),
+  count_ExMan_inPark = numeric(),
+  device_info_serial <- character(),
   stringsAsFactors = FALSE
 )
 
@@ -1011,23 +1027,28 @@ for (file in file_list_2023) {
   
   # Filter rows with confidence >= 0.5
   filtered_data_2023 <- subset(data, confidence >= 0.5)
-  total_behaviors <- nrow(filtered_data_2023)
-  count_ExMan <- sum(filtered_data_2023$prediction == "ExFlap", filtered_data_2023$prediction == "Manouvre")
+  if (any(filtered_data_2023$inPark == 1)) {
+    filtered_data_2023$inPark <- 1
+  }
+  count_ExMan <- sum(filtered_data_2023$prediction %in% c("ExFlap", "Manouvre"))
   
   results_2023 <- rbind(results_2023, data.frame(
     file_name = basename(file),
-    count_ExMan = count_ExMan,
+    count_ExMan_inPark = count_ExMan,
     stringsAsFactors = FALSE
   ))
-    }
+}
 
 all_tracker_data_with_inPark_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Park_Events_Gulls/all_tracker_data_with_inPark_2023.csv")
-strongest_feeding_events_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Gulls/Strongest_Feeding_Events_2023.csv")
 
+file_unique_events_2023 <- all_tracker_data_with_inPark_2023 %>%
+  group_by(file_name)%>%
+  summarise(inPark = ifelse(any(inPark == 1), 1, 0),
+            device_info_serial = unique(device_info_serial)
+            )
 #filtering the behaviors
-files_ExMan_2023 <- all_tracker_data_with_inPark_2023[all_tracker_data_with_inPark_2023$file_name %in% strongest_feeding_events_2023$file_name, ]
 
-files_ExMan_2023 <- left_join(strongest_feeding_events_2023, results_2023, by = "file_name")
+files_ExMan_2023 <- left_join(results_2023, file_unique_events_2023, by = "file_name")
 files_ExMan_2023$year <- 2023
 
 #2024
@@ -1038,7 +1059,8 @@ file_list_2024 <- list.files(path = csv_folder, pattern = "\\.csv$", full.names 
 # Initialize a data frame to store results
 results_2024 <- data.frame(
   file_name = character(),
-  count_ExMan = numeric(),
+  count_ExMan_inPark = numeric(),
+  device_info_serial <- character(),
   stringsAsFactors = FALSE
 )
 
@@ -1050,67 +1072,209 @@ for (file in file_list_2024) {
   
   # Filter rows with confidence >= 0.5
   filtered_data_2024 <- subset(data, confidence >= 0.5)
+  count_ExMan <- sum(filtered_data_2024$prediction %in% c("ExFlap", "Manouvre"))
   
-  total_behaviors <- nrow(filtered_data_2024)
-  count_ExMan <- sum(filtered_data_2024$prediction == "ExFlap", filtered_data_2024$prediction == "Manouvre")
-  
-   results_2024 <- rbind(results_2024, data.frame(
+  results_2024 <- rbind(results_2024, data.frame(
     file_name = basename(file),
-    count_ExMan = count_ExMan,
+    count_ExMan_inPark = count_ExMan,
     stringsAsFactors = FALSE
   ))
-    }
+}
 
 all_tracker_data_with_inPark_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Park_Events_Gulls/all_tracker_data_with_inPark_2024.csv")
-strongest_feeding_events_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Gulls/Strongest_Feeding_Events_2024.csv")
 
+file_unique_events_2024 <- all_tracker_data_with_inPark_2024 %>%
+  group_by(file_name)%>%
+  summarise(inPark = ifelse(any(inPark == 1), 1, 0),
+            device_info_serial = unique(device_info_serial)
+            )
 #filtering the behaviors
-files_ExMan_2024 <- all_tracker_data_with_inPark_2024[all_tracker_data_with_inPark_2024$file_name %in% strongest_feeding_events_2024$file_name, ]
 
-files_ExMan_2024 <- left_join(strongest_feeding_events_2024, results_2024, by = "file_name")
+files_ExMan_2024 <- left_join(results_2024, file_unique_events_2024, by = "file_name")
 files_ExMan_2024$year <- 2024
 #binding together and analysing
 files_ExMan <- rbind(files_ExMan_2023, files_ExMan_2024)
 
-model <- glmer(count_ExMan ~ inPark + (1 | device_info_serial) + (1 | year), data = files_ExMan, family = poisson)
+model <- glmmTMB(count_ExMan_inPark ~ inPark + (1 | device_info_serial) + (1 | year), data = files_ExMan, family = nbinom2)
 summary(model)
 
-# First make sure inPark and year are factors with nice labels
+ # First make sure inPark and year are factors with nice labels
+files_ExMan$inPark <- factor(files_ExMan$inPark,
+                             levels = c(0, 1),
+                             labels = c("Outside", "Inside"))
+files_ExMan$year <- as.factor(files_ExMan$year)
+#plotting the boxplots
+count_ExMan_inPark <- ggplot(files_ExMan, aes(x = inPark, y = count_ExMan_inPark, fill = inPark)) +
+  geom_boxplot(outlier.shape = 1, alpha = 1, color = "black") +
+  facet_wrap(~ year) +
+  scale_y_log10() +
+  scale_fill_manual(values = c("Inside" = "red", "Outside" = "blue")) +
+  labs(x = "In Park", y = "Absolute count of ExMan (log10)", fill = "Park Status") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+#saving the plots
+
+ggsave(
+   filename =  "count_ExMan_inPark.pdf",
+   plot = count_ExMan_inPark,
+    scale = 1,
+    width = 5,
+    height = 5
+  )
+print(count_ExMan_inPark)
+
+#calculating mean, min, max proportion_ExMan
+summary_stats_ExMan_inPark <- files_ExMan %>%
+  group_by(year, inPark) %>%
+  summarise(
+    mean_count = mean(count_ExMan),
+    min_count = min(count_ExMan),
+    max_count = max(count_ExMan),  # Fixed column name
+    .groups = 'drop'
+  )
+print(summary_stats_ExMan_inPark)
+```
+
+```{r sub 3.2 : do the LBBGs need to move more actively inside the parks while feeding?, message=FALSE, warning=FALSE}
+library(readr)   
+library(dplyr)    
+library(lme4)
+library(lmerTest)
+library(ggplot2)  
+
+#2023
+# 2. Define and list the folder with your CSV files
+csv_folder <- "/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Processed_Data_Gulls/processed_data_2023"
+file_list_2023 <- list.files(path = csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+results_2023 <- data.frame(
+  file_name = character(),
+  count_ExMan_Feeding = numeric(),
+  device_info_serial <- character(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each file
+for (file in file_list_2023) {
+  
+  # Read the CSV file
+  data <- read.csv(file)
+  
+  # Filter rows with confidence >= 0.5
+  filtered_data_2023 <- subset(data, confidence >= 0.5)
+  if (any(filtered_data_2023$inPark == 1)) {
+    filtered_data_2023$inPark <- 1
+  }
+  count_ExMan <- sum(filtered_data_2023$prediction %in% c("ExFlap", "Manouvre"))
+  
+  results_2023 <- rbind(results_2023, data.frame(
+    file_name = basename(file),
+    count_ExMan_Feeding = count_ExMan,
+    stringsAsFactors = FALSE
+  ))
+}
+
+strongest_feeding_events_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Gulls/Strongest_Feeding_Events_2023.csv")
+results_2023_filtered <- results_2023 %>%
+  filter(file_name %in% strongest_feeding_events_2023$file_name)
+
+file_unique_events_2023 <- strongest_feeding_events_2023 %>%
+  group_by(file_name)%>%
+  summarise(inPark = ifelse(any(inPark == 1), 1, 0),
+            device_info_serial = unique(device_info_serial)
+            )
+#filtering the behaviors
+
+files_ExMan_2023 <- left_join(results_2023_filtered, file_unique_events_2023, by = "file_name")
+files_ExMan_2023$year <- 2023
+
+#2024
+# 2. Define and list the folder with your CSV files
+csv_folder <- "/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Processed_Data_Gulls/processed_data_2024"
+file_list_2024 <- list.files(path = csv_folder, pattern = "\\.csv$", full.names = TRUE)
+
+# Initialize a data frame to store results
+results_2024 <- data.frame(
+  file_name = character(),
+  count_ExMan_Feeding = numeric(),
+  device_info_serial <- character(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each file
+for (file in file_list_2024) {
+  
+  # Read the CSV file
+  data <- read.csv(file)
+  
+  # Filter rows with confidence >= 0.5
+  filtered_data_2024 <- subset(data, confidence >= 0.5)
+  count_ExMan <- sum(filtered_data_2024$prediction %in% c("ExFlap", "Manouvre"))
+  
+  results_2024 <- rbind(results_2024, data.frame(
+    file_name = basename(file),
+    count_ExMan_Feeding = count_ExMan,
+    stringsAsFactors = FALSE
+  ))
+}
+
+strongest_feeding_events_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Gulls/Strongest_Feeding_Events_2024.csv")
+
+file_unique_events_2024 <- strongest_feeding_events_2024 %>%
+  group_by(file_name)%>%
+  summarise(inPark = ifelse(any(inPark == 1), 1, 0),
+            device_info_serial = unique(device_info_serial)
+            )
+
+#filtering the behaviors
+results_2024_filtered <- results_2024 %>%
+  filter(file_name %in% strongest_feeding_events_2024$file_name)
+files_ExMan_2024 <- left_join(results_2024_filtered, file_unique_events_2024,  by = "file_name")
+files_ExMan_2024$year <- 2024
+#binding together and analysing
+files_ExMan <- rbind(files_ExMan_2023, files_ExMan_2024)
+
+model <- glmmTMB(count_ExMan_Feeding ~ inPark + (1 | device_info_serial) + (1 | year), data = files_ExMan, family = nbinom2)
+summary(model)
+
+ # First make sure inPark and year are factors with nice labels
 files_ExMan$inPark <- factor(files_ExMan$inPark,
                              levels = c(0, 1),
                              labels = c("Outside", "Inside"))
 files_ExMan$year <- as.factor(files_ExMan$year)
 
-# Then create a grouped boxplot, color by inPark
-count_ExMan <- ggplot(files_ExMan, aes(x = inPark, y = count_ExMan, fill = inPark)) +
-     geom_boxplot() +
-     facet_wrap(~year, scales = "free_y") +
-     scale_fill_manual(values = c("blue", "red")) +
-     theme_minimal() +
-  labs(
-    x = "Year",
-    y = "count of ExFlap or Manouvre",
-    fill = "Wind Park"
-  )
+#plotting the boxplots
+count_ExMan_Feeding <- ggplot(files_ExMan, aes(x = inPark, y = count_ExMan_Feeding, fill = inPark)) +
+  geom_boxplot(outlier.shape = 1, alpha = 1, color = "black") +
+  facet_wrap(~ year) +
+  scale_y_log10()+
+  scale_fill_manual(values = c("Inside" = "red", "Outside" = "blue")) +
+  labs(x = "In Park", y = "Absolute count of ExMan (log10)", fill = "Park Status") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+#saving the plots
+
 ggsave(
-   filename =  "count_ExMan.pdf",
-   plot = count_ExMan,
+   filename =  "count_ExMan_Feeding.pdf",
+   plot = count_ExMan_Feeding,
     scale = 1,
     width = 5,
     height = 5
   )
-print(count_ExMan)
+print(count_ExMan_Feeding)
 
 #calculating mean, min, max proportion_ExMan
-summary_stats_ExMan <- files_ExMan %>%
+summary_stats_ExMan_Feeding <- files_ExMan %>%
   group_by(year, inPark) %>%
   summarise(
-    mean_proportion = mean(count_ExMan),
-    min_proportion = min(count_ExMan),
-    max_proportion = max(count_ExMan),  # Fixed column name
+    mean_count = mean(count_ExMan_Feeding),
+    min_count = min(count_ExMan_Feeding),
+    max_count = max(count_ExMan_Feeding),  # Fixed column name
     .groups = 'drop'
   )
-print(summary_stats_ExMan)
+print(summary_stats_ExMan_Feeding)
 ```
 
 ```{r overlapping between the trackers and wind park, message=FALSE, warning=FALSE}
@@ -1126,7 +1290,7 @@ wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind 
 
 # 2. Load tracker coordinates (CSV or dataframe)
 tracker_data <- all_tracker_data_with_inPark_2023%>%
-  filter(file_name=="5579_2023-07-17 02:06:31_2023-07-17 05:13:04.csv")
+  filter(file_name=="5615_2023-06-13 00:04:30_2023-06-13 10:00:38.csv")
 
 # Convert tracker data to an `sf` object
 tracker_sf <- st_as_sf(
@@ -1184,4 +1348,154 @@ ggplot() +
        xlim = c(bbox["xmin"] - buffer, bbox["xmax"] + buffer),
        ylim = c(bbox["ymin"] - buffer, bbox["ymax"] + buffer),
        expand = FALSE)
+```
+
+```{r count of each windpark, message=FALSE, warning=FALSE}
+#2023
+tracker_data_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Park_Events_Gulls/all_tracker_data_with_inPark_2023.csv")
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+# Convert tracker data to an `sf` object
+tracker_sf_2023 <- st_as_sf(
+  tracker_data_2023,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+#transforming wind_parks to match tracker_sf CRS
+wind_parks_2023 <- st_transform(wind_parks, st_crs(tracker_sf_2023))
+overlap_results_2023 <- st_join(
+  tracker_sf_2023,       
+  wind_parks,       
+  join = st_intersects,
+  left = FALSE      
+)
+
+# Count by park
+summary_table_2023 <- overlap_results_2023 %>%
+  filter(!is.na(name)) %>% 
+  distinct(file_name, name)
+
+filtered_summary_2023 <- summary_table_2023 %>%
+  filter(name %in% c("Hollandse Kust (Zuid)", "Hollandse Kust (Noord)", "OWF Egmond aan Zee"))%>%
+  count(name, name = "Events Inside each Windpark")
+
+View(filtered_summary_2023)
+
+#2024
+tracker_data_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Park_Events_Gulls/all_tracker_data_with_inPark_2024.csv")
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+# Convert tracker data to an `sf` object
+tracker_sf_2024 <- st_as_sf(
+  tracker_data_2024,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+#transforming wind_parks to match tracker_sf CRS
+wind_parks_2024 <- st_transform(wind_parks, st_crs(tracker_sf_2024))
+overlap_results_2024 <- st_join(
+  tracker_sf_2024,       
+  wind_parks,       
+  join = st_intersects,
+  left = FALSE      
+)
+
+# Count by park
+summary_table_2024 <- overlap_results_2024 %>%
+  filter(!is.na(name)) %>% 
+  distinct(file_name, name)
+
+filtered_summary_2024 <- summary_table_2024 %>%
+  filter(name %in% c("Hollandse Kust (Zuid)", "Hollandse Kust (Noord)", "OWF Egmond aan Zee"))%>%
+  count(name, name = "Events Inside each Windpark")
+
+View(filtered_summary_2024)
+```
+
+```{r convex hull of all the feeding events, message=FALSE, warning=FALSE}
+library(sf)
+sf::sf_use_s2(FALSE)
+library(dplyr)  
+library(readr)  
+library(ggplot2)    
+library(lwgeom) 
+# 1. Load wind park polygons (shapefile)
+wind_parks <- st_read("/Users/constantijn/Desktop/2025_Birds/Data/Data_RAW/Wind Farms (polygons)/windfarmspolyPolygon.shp")
+
+#convex hull events
+strongest_feeding_events_2023 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Gulls/Strongest_Feeding_Events_2023.csv")
+strongest_feeding_events_2024 <- read_csv("/Users/constantijn/Desktop/2025_Birds/Data/Data_Cleaned/Feeding_Events_Gulls/Strongest_Feeding_Events_2024.csv")
+strongest_feeding_events_total <-  rbind(strongest_feeding_events_2023, strongest_feeding_events_2024)
+
+strongest_feeding_outside_total <- strongest_feeding_events_total %>%
+  filter(inPark == 0)
+strongest_feeding_inside_total <- strongest_feeding_events_total %>%
+  filter(inPark == 1)
+
+# Convert tracker data to an `sf` object
+points_sf_inside <- st_as_sf(
+  strongest_feeding_inside_total,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+points_sf_outside <- st_as_sf(
+  strongest_feeding_outside_total,
+  coords = c("longitude", "latitude"),
+  crs = 4326  # Set coordinate system to WGS84
+)
+
+
+forteiland_point <- st_as_sf(
+  data.frame(name = "Forteiland IJmuiden colony", 
+             longitude = 4.5767, 
+             latitude = 52.465),
+  coords = c("longitude", "latitude"),
+  crs = 4326
+)
+
+
+hull_inside <- st_convex_hull(st_union(points_sf_inside))
+hull_inside_windpark <- st_intersection(hull_inside,wind_parks)
+hull_outside <- st_convex_hull(st_union(points_sf_outside))
+
+hull_bbox <- st_bbox(hull_outside)
+
+buffer_factor <- 0.1
+
+# plotting the results
+Convex_hull_total <- ggplot() +
+  geom_sf(data = wind_parks, aes(color = "Wind Parks"), fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = points_sf_inside, aes(color = "Points Inside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = points_sf_outside, aes(color = "Points Outside The Wind Park"), size = 1, alpha = 1) +
+  geom_sf(data = forteiland_point, aes(color = "Colony Location Forteiland"), size = 3, alpha = 1, shape = 17) +
+  geom_sf(data = hull_inside_windpark, aes(color = "Convex Hull Inside Wind Park"), fill = NA, size = 1.2) +
+  geom_sf(data = hull_outside, aes(color = "Convex Hull Outside Wind Park"), fill = NA, size = 1.2) +
+  
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Wind Parks" = "blue",
+      "Points Inside The Wind Park" = "darkred",
+      "Points Outside The Wind Park" = "grey",
+      "Colony Location Forteiland" = "purple",
+      "Convex Hull Inside Wind Park" = "red",
+      "Convex Hull Outside Wind Park" = "black"
+    )
+  ) +
+  coord_sf(
+    xlim = c(hull_bbox$xmin - buffer_factor * (hull_bbox$xmax - hull_bbox$xmin), hull_bbox$xmax + buffer_factor * (hull_bbox$xmax -      hull_bbox$xmin)), 
+    ylim = c(hull_bbox$ymin - buffer_factor * (hull_bbox$ymax - hull_bbox$ymin), hull_bbox$ymax + buffer_factor * (hull_bbox$ymax - hull_bbox$ymin)), expand = TRUE) +
+  theme_minimal()
+
+ggsave(
+  filename =  "Convex_Hull_total.pdf",
+  plot = Convex_hull_total,
+  scale = 1,
+  width = 7,
+  height = 5
+)
+print(Convex_hull_total)
 ```
